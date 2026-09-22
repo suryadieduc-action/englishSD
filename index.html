@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#01579B">
+<title>English Feeding Frenzy</title>
+<link rel="manifest" href="data:application/json,{%22name%22:%22English%20Feeding%20Frenzy%22,%22short_name%22:%22EFrenzy%22,%22display%22:%22fullscreen%22,%22background_color%22:%22%23001a33%22,%22theme_color%22:%22%2301579B%22,%22start_url%22:%22.%22}">
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #001a33;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    touch-action: none;
+    position: fixed;
+  }
+  #gameContainer {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+  }
+  /* HUD */
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 8px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    pointer-events: none;
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    z-index: 10;
+    padding-top: env(safe-area-inset-top, 8px);
+  }
+  #hudLeft, #hudRight {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .hudBox {
+    background: rgba(0,0,0,0.5);
+    padding: 5px 10px;
+    border-radius: 16px;
+    font-size: clamp(11px, 3vw, 14px);
+    border: 2px solid rgba(255,255,255,0.35);
+    white-space: nowrap;
+  }
+  /* Audio toggle button */
+  #audioBtn {
+    position: absolute;
+    top: calc(8px + env(safe-area-inset-top, 8px));
+    right: 10px;
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.55);
+    border: 2px solid rgba(255,255,255,0.4);
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    transform: translateY(80px);
+  }
+  #audioBtn:active { transform: translateY(80px) scale(0.9); }
+  #hudRight { margin-right: 52px; }
+  /* Category badge */
+  #categoryBadge {
+    position: absolute;
+    top: calc(8px + env(safe-area-inset-top, 8px));
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #9C27B0, #673AB7);
+    color: #fff;
+    padding: 5px 14px;
+    border-radius: 16px;
+    font-size: clamp(11px, 3vw, 13px);
+    font-weight: bold;
+    border: 2px solid rgba(255,255,255,0.5);
+    z-index: 10;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  /* Target word banner */
+  #targetBanner {
+    position: absolute;
+    top: calc(60px + env(safe-area-inset-top, 8px));
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #ffd93d, #ff9a3c);
+    color: #001a33;
+    padding: 10px 24px;
+    border-radius: 30px;
+    font-size: clamp(18px, 5.5vw, 26px);
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    z-index: 10;
+    text-align: center;
+    pointer-events: none;
+    border: 3px solid #fff;
+    min-width: 180px;
+    max-width: 90vw;
+  }
+  #targetBanner small {
+    display: block;
+    font-size: clamp(9px, 2.5vw, 11px);
+    font-weight: normal;
+    color: #333;
+    margin-top: 2px;
+  }
+  /* Overlay screens */
+  .overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 20, 40, 0.94);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    padding: 20px;
+    text-align: center;
+    color: #fff;
+    overflow-y: auto;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h1 {
+    font-size: clamp(22px, 6.5vw, 42px);
+    margin-bottom: 12px;
+    color: #ffd93d;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+  }
+  .overlay h2 {
+    font-size: clamp(16px, 4.5vw, 22px);
+    margin: 15px 0 8px;
+    color: #4FC3F7;
+  }
+  .overlay p {
+    font-size: clamp(13px, 3.5vw, 16px);
+    margin-bottom: 8px;
+    max-width: 500px;
+    line-height: 1.5;
+  }
+  .overlay button {
+    margin-top: 15px;
+    padding: 14px 38px;
+    font-size: clamp(15px, 4.5vw, 20px);
+    font-weight: bold;
+    background: linear-gradient(135deg, #4CAF50, #2E7D32);
+    color: #fff;
+    border: 3px solid #fff;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    transition: transform 0.15s;
+    font-family: inherit;
+  }
+  .overlay button:active { transform: scale(0.95); }
+  .overlay .emoji {
+    font-size: clamp(45px, 14vw, 80px);
+    margin-bottom: 8px;
+    animation: float 2s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  #finalScore {
+    font-size: clamp(38px, 12vw, 70px);
+    color: #4CAF50;
+    margin: 8px 0;
+    font-weight: bold;
+    text-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+  }
+  #feedback {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    font-size: clamp(45px, 14vw, 90px);
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0;
+    text-shadow: 4px 4px 8px rgba(0,0,0,0.7);
+  }
+  #feedback.show { animation: pop 0.9s ease-out; }
+  @keyframes pop {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    30% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+    70% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+  }
+  #comboText {
+    position: absolute;
+    top: calc(130px + env(safe-area-inset-top, 8px));
+    left: 50%;
+    transform: translateX(-50%);
+    color: #ff6b6b;
+    font-size: clamp(16px, 4.5vw, 22px);
+    font-weight: bold;
+    text-shadow: 2px 2px 4px #000;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 10;
+    pointer-events: none;
+  }
+  #comboText.show { opacity: 1; }
+  /* Category selector */
+  .categoryGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    width: 100%;
+    max-width: 440px;
+    margin-top: 10px;
+  }
+  .categoryBtn {
+    background: linear-gradient(135deg, #0277BD, #01579B) !important;
+    padding: 12px 8px !important;
+    font-size: clamp(12px, 3.5vw, 15px) !important;
+    border-radius: 14px !important;
+    margin: 0 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    border: 2px solid rgba(255,255,255,0.5) !important;
+  }
+  .categoryBtn .catEmoji { font-size: 22px; }
+  .categoryBtn .catName { font-weight: bold; }
+  .categoryBtn .catCount { font-size: 10px; opacity: 0.8; }
+  .categoryBtn.active {
+    background: linear-gradient(135deg, #4CAF50, #2E7D32) !important;
+    border-color: #FFD93D !important;
+    box-shadow: 0 0 20px rgba(255, 217, 61, 0.6);
+  }
+  .categoryBtn:active { transform: scale(0.95); }
+  /* Highscore display */
+  .highScoreBox {
+    background: rgba(255, 217, 61, 0.15);
+    border: 2px solid #ffd93d;
+    border-radius: 14px;
+    padding: 10px 20px;
+    margin: 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 240px;
+  }
+  .highScoreBox .hsItem {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    font-size: clamp(12px, 3.3vw, 14px);
+  }
+  .highScoreBox .hsLabel { color: #ffd93d; font-weight: bold; }
+  .highScoreBox .hsValue { color: #fff; font-weight: bold; }
+  /* Stats grid */
+  .statsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 400px;
+    margin: 10px 0;
+  }
+  .statBox {
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.25);
+    border-radius: 12px;
+    padding: 8px 4px;
+  }
+  .statBox .statVal {
+    font-size: clamp(18px, 5vw, 24px);
+    color: #4FC3F7;
+    font-weight: bold;
+  }
+  .statBox .statLbl {
+    font-size: clamp(9px, 2.5vw, 11px);
+    opacity: 0.85;
+  }
+  /* Scrollable content in game over */
+  .overlayContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 480px;
+    width: 100%;
+    padding: 10px 0;
+  }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="hudLeft">
+      <div class="hudBox" id="score">⭐ Skor: 0</div>
+      <div class="hudBox" id="lives">❤️ Nyawa: 3</div>
+    </div>
+    <div id="hudRight">
+      <div class="hudBox" id="level">📊 Lv: 1</div>
+      <div class="hudBox" id="size">🐟 Kecil</div>
+    </div>
+  </div>
+
+  <!-- Category badge -->
+  <div id="categoryBadge">🐾 Animals</div>
+
+  <!-- Audio toggle -->
+  <button id="audioBtn" title="Suara">🔊</button>
+
+  <!-- Target Word -->
+  <div id="targetBanner">
+    🎯 <span id="targetWord">APPLE</span>
+    <small>Makan ikan dengan arti yang benar!</small>
+  </div>
+
+  <!-- Combo -->
+  <div id="comboText"></div>
+
+  <!-- Feedback -->
+  <div id="feedback"></div>
+
+  <!-- ============ START SCREEN ============ -->
+  <div id="startScreen" class="overlay">
+    <div class="overlayContent">
+      <div class="emoji">🐟🎓</div>
+      <h1>English Feeding Frenzy</h1>
+      <p>Bantu ikan kecil tumbuh besar dengan memakan ikan yang memiliki <b>arti kosakata yang benar</b>!</p>
+      <p style="font-size: clamp(11px, 3vw, 13px); opacity: 0.75;">📱 Sentuh & gerakkan jari untuk mengendalikan ikan</p>
+
+      <h2>📚 Pilih Kategori Kosakata:</h2>
+      <div class="categoryGrid" id="categoryGrid"></div>
+
+      <div class="highScoreBox" id="startHighScore" style="display:none;">
+        <div class="hsItem">
+          <span class="hsLabel">🏆 Highscore:</span>
+          <span class="hsValue" id="hsValue">0</span>
+        </div>
+      </div>
+
+      <button id="startBtn">▶ MULAI BERMAIN</button>
+
+      <button id="resetHsBtn" style="background: linear-gradient(135deg, #F44336, #B71C1C); font-size: clamp(11px, 3vw, 13px); padding: 8px 20px; margin-top: 8px;">🗑 Reset Highscore</button>
+    </div>
+  </div>
+
+  <!-- ============ GAME OVER SCREEN ============ -->
+  <div id="gameOverScreen" class="overlay hidden">
+    <div class="overlayContent">
+      <div class="emoji">🐠💔</div>
+      <h1>Game Over!</h1>
+
+      <div class="statsGrid">
+        <div class="statBox">
+          <div class="statVal" id="statCorrect">0</div>
+          <div class="statLbl">✅ Benar</div>
+        </div>
+        <div class="statBox">
+          <div class="statVal" id="statWrong">0</div>
+          <div class="statLbl">❌ Salah</div>
+        </div>
+        <div class="statBox">
+          <div class="statVal" id="statCombo">0</div>
+          <div class="statLbl">🔥 Max Combo</div>
+        </div>
+      </div>
+
+      <p>Skor Akhir:</p>
+      <div id="finalScore">0</div>
+      <p id="gameOverMsg">Ayo coba lagi!</p>
+
+      <div class="highScoreBox" id="gameOverHsBox" style="display:none;">
+        <div class="hsItem">
+          <span class="hsLabel">🏆 Highscore:</span>
+          <span class="hsValue" id="goHsValue">0</span>
+        </div>
+        <div class="hsItem" id="newRecordRow" style="display:none;">
+          <span class="hsLabel" style="color: #4CAF50;">✨ REKOR BARU! ✨</span>
+        </div>
+      </div>
+
+      <button id="restartBtn">🔄 MAIN LAGI</button>
+      <button id="menuBtn" style="background: linear-gradient(135deg, #0277BD, #01579B); font-size: clamp(13px, 3.5vw, 16px); padding: 10px 28px; margin-top: 8px;">🏠 Menu Utama</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ENGLISH FEEDING FRENZY v2.0
+// With Sound, Category Levels, and LocalStorage Highscore
+// ============================================================
+
+// ---------- VOCABULARY DATABASE (by category) ----------
+const CATEGORIES = {
+  animals: {
+    name: "Animals", emoji: "🐾",
+    words: [
+      {en: "CAT", id: "KUCING"},
+      {en: "DOG", id: "ANJING"},
+      {en: "BIRD", id: "BURUNG"},
+      {en: "FISH", id: "IKAN"},
+      {en: "COW", id: "SAPI"},
+      {en: "DUCK", id: "BEBEK"},
+      {en: "LION", id: "SINGA"},
+      {en: "ELEPHANT", id: "GAJAH"},
+      {en: "TIGER", id: "MACAN"},
+      {en: "HORSE", id: "KUDA"},
+      {en: "RABBIT", id: "KELINCI"},
+      {en: "MONKEY", id: "MONYET"},
+    ]
+  },
+  fruits: {
+    name: "Fruits", emoji: "🍎",
+    words: [
+      {en: "APPLE", id: "APEL"},
+      {en: "BANANA", id: "PISANG"},
+      {en: "ORANGE", id: "JERUK"},
+      {en: "GRAPE", id: "ANGGUR"},
+      {en: "MANGO", id: "MANGGA"},
+      {en: "WATERMELON", id: "SEMANGKA"},
+      {en: "STRAWBERRY", id: "STROBERI"},
+      {en: "PINEAPPLE", id: "NANAS"},
+      {en: "PEAR", id: "PIR"},
+      {en: "PEACH", id: "PERSIK"},
+    ]
+  },
+  colors: {
+    name: "Colors", emoji: "🎨",
+    words: [
+      {en: "RED", id: "MERAH"},
+      {en: "BLUE", id: "BIRU"},
+      {en: "GREEN", id: "HIJAU"},
+      {en: "YELLOW", id: "KUNING"},
+      {en: "BLACK", id: "HITAM"},
+      {en: "WHITE", id: "PUTIH"},
+      {en: "PURPLE", id: "UNGU"},
+      {en: "PINK", id: "MERAH MUDA"},
+      {en: "BROWN", id: "COKLAT"},
+      {en: "GREY", id: "ABU-ABU"},
+    ]
+  },
+  numbers: {
+    name: "Numbers", emoji: "🔢",
+    words: [
+      {en: "ONE", id: "SATU"},
+      {en: "TWO", id: "DUA"},
+      {en: "THREE", id: "TIGA"},
+      {en: "FOUR", id: "EMPAT"},
+      {en: "FIVE", id: "LIMA"},
+      {en: "SIX", id: "ENAM"},
+      {en: "SEVEN", id: "TUJUH"},
+      {en: "EIGHT", id: "DELAPAN"},
+      {en: "NINE", id: "SEMBILAN"},
+      {en: "TEN", id: "SEPULUH"},
+    ]
+  },
+  body: {
+    name: "Body", emoji: "🧠",
+    words: [
+      {en: "HEAD", id: "KEPALA"},
+      {en: "HAND", id: "TANGAN"},
+      {en: "FOOT", id: "KAKI"},
+      {en: "EYE", id: "MATA"},
+      {en: "EAR", id: "TELINGA"},
+      {en: "NOSE", id: "HIDUNG"},
+      {en: "MOUTH", id: "MULUT"},
+      {en: "HAIR", id: "RAMBUT"},
+      {en: "FINGER", id: "JARI"},
+      {en: "KNEE", id: "LUTUT"},
+    ]
+  },
+  things: {
+    name: "Things", emoji: "📦",
+    words: [
+      {en: "BOOK", id: "BUKU"},
+      {en: "CHAIR", id: "KURSI"},
+      {en: "TABLE", id: "MEJA"},
+      {en: "HOUSE", id: "RUMAH"},
+      {en: "CAR", id: "MOBIL"},
+      {en: "BALL", id: "BOLA"},
+      {en: "TREE", id: "POHON"},
+      {en: "FLOWER", id: "BUNGA"},
+      {en: "SUN", id: "MATAHARI"},
+      {en: "MOON", id: "BULAN"},
+      {en: "STAR", id: "BINTANG"},
+      {en: "WATER", id: "AIR"},
+    ]
+  }
+};
+
+// ---------- AUDIO MANAGER (Web Audio API) ----------
+const Audio = (() => {
+  let audioCtx = null;
+  let enabled = true;
+
+  function init() {
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        console.warn('Web Audio not supported');
+      }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  function playTone(freq, duration, type = 'sine', volume = 0.15, slideTo = null) {
+    if (!enabled || !audioCtx) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      if (slideTo !== null) {
+        osc.frequency.exponentialRampToValueAtTime(slideTo, audioCtx.currentTime + duration);
+      }
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch (e) {}
+  }
+
+  return {
+    init,
+    setEnabled(v) { enabled = v; },
+    isEnabled() { return enabled; },
+    
+    // Sound Effects
+    eatCorrect() {
+      // Rising happy chord
+      playTone(523, 0.1, 'sine', 0.18);       // C5
+      setTimeout(() => playTone(659, 0.1, 'sine', 0.18), 60);  // E5
+      setTimeout(() => playTone(784, 0.15, 'sine', 0.18), 120); // G5
+    },
+    eatWrong() {
+      // Descending buzz
+      playTone(220, 0.3, 'sawtooth', 0.15, 80);
+    },
+    comboUp(n) {
+      const base = 660 + Math.min(n, 8) * 60;
+      playTone(base, 0.08, 'square', 0.12);
+    },
+    levelUp() {
+      playTone(523, 0.1, 'sine', 0.15);
+      setTimeout(() => playTone(659, 0.1, 'sine', 0.15), 80);
+      setTimeout(() => playTone(784, 0.1, 'sine', 0.15), 160);
+      setTimeout(() => playTone(1046, 0.2, 'sine', 0.15), 240);
+    },
+    gameOver() {
+      playTone(400, 0.2, 'sine', 0.18, 200);
+      setTimeout(() => playTone(300, 0.2, 'sine', 0.18, 150), 200);
+      setTimeout(() => playTone(200, 0.5, 'sine', 0.18, 80), 400);
+    },
+    buttonClick() {
+      playTone(800, 0.06, 'sine', 0.12);
+    },
+    newRecord() {
+      const notes = [523, 659, 784, 1046, 1318];
+      notes.forEach((f, i) => {
+        setTimeout(() => playTone(f, 0.15, 'sine', 0.18), i * 100);
+      });
+    }
+  };
+})();
+
+// ---------- HIGHSCORE MANAGER (localStorage) ----------
+const HighScore = (() => {
+  const KEY_PREFIX = 'eff_highscore_';
+  const KEY_MUTE = 'eff_muted';
+
+  return {
+    get(category) {
+      try {
+        const v = localStorage.getItem(KEY_PREFIX + category);
+        return v ? parseInt(v, 10) : 0;
+      } catch (e) { return 0; }
+    },
+    set(category, score) {
+      try {
+        const current = this.get(category);
+        if (score > current) {
+          localStorage.setItem(KEY_PREFIX + category, String(score));
+          return true; // new record
+        }
+      } catch (e) {}
+      return false;
+    },
+    getOverall() {
+      // Get highest across all categories
+      let max = 0, cat = null;
+      for (const key in CATEGORIES) {
+        const v = this.get(key);
+        if (v > max) { max = v; cat = key; }
+      }
+      return { score: max, category: cat };
+    },
+    reset() {
+      try {
+        for (const key in CATEGORIES) {
+          localStorage.removeItem(KEY_PREFIX + key);
+        }
+      } catch (e) {}
+    },
+    getMuted() {
+      try { return localStorage.getItem(KEY_MUTE) === '1'; } catch(e) { return false; }
+    },
+    setMuted(m) {
+      try { localStorage.setItem(KEY_MUTE, m ? '1' : '0'); } catch(e) {}
+    }
+  };
+})();
+
+// ---------- CANVAS SETUP ----------
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let W = 0, H = 0;
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+function resizeCanvas() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
+resizeCanvas();
+
+// ---------- GAME STATE ----------
+const GAME = {
+  state: 'menu',
+  score: 0,
+  lives: 3,
+  level: 1,
+  combo: 0,
+  maxCombo: 0,
+  category: 'animals',
+  targetWord: null,
+  fishes: [],
+  bubbles: [],
+  particles: [],
+  lastSpawn: 0,
+  spawnInterval: 1400,
+  lastTime: 0,
+  correctCount: 0,
+  wrongCount: 0,
+  soundsOn: true,
+  ready: false,      // prevents spawning until first frame after init
+  fishIdCounter: 0,
+};
+
+const player = {
+  x: 0, y: 0,
+  size: 22,
+  vx: 0, vy: 0,
+};
+
+// ---------- INPUT ----------
+const pointer = { x: 0, y: 0, active: false };
+
+function handlePointerMove(e) {
+  const rect = canvas.getBoundingClientRect();
+  let cx, cy;
+  if (e.touches && e.touches.length > 0) {
+    cx = e.touches[0].clientX;
+    cy = e.touches[0].clientY;
+  } else {
+    cx = e.clientX;
+    cy = e.clientY;
+  }
+  pointer.x = cx - rect.left;
+  pointer.y = cy - rect.top;
+  pointer.active = true;
+}
+
+canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handlePointerMove(e); }, {passive: false});
+canvas.addEventListener('touchmove',  (e) => { e.preventDefault(); handlePointerMove(e); }, {passive: false});
+canvas.addEventListener('touchend',   (e) => { e.preventDefault(); pointer.active = false; }, {passive: false});
+canvas.addEventListener('mousemove',  handlePointerMove);
+canvas.addEventListener('mouseleave', () => { pointer.active = false; });
+
+// ---------- UTILITIES ----------
+function rand(min, max) { return Math.random() * (max - min) + min; }
+function dist(x1, y1, x2, y2) { return Math.hypot(x2 - x1, y2 - y1); }
+
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+// ---------- FISH CLASS ----------
+class Fish {
+  constructor(isCorrect, wordData) {
+    this.id = GAME.fishIdCounter++;
+    this.isCorrect = isCorrect;
+    this.wordData = wordData;
+    this.size = isCorrect ? rand(17, 22) : rand(17, 26);
+    this.baseSpeed = rand(0.9, 1.7) + GAME.level * 0.12;
+    this.speed = this.baseSpeed;
+    this.direction = Math.random() < 0.5 ? 1 : -1;
+    this.y = rand(140, Math.max(180, H - 60));
+    this.x = this.direction === 1 ? -80 : W + 80;
+    this.wobble = Math.random() * Math.PI * 2;
+    this.wobbleSpeed = rand(0.02, 0.05);
+    this.dead = false;
+    this.eaten = false;
+    this.eatAnim = 0; // for eating animation
+    this.color = this.getColor();
+    this.label = isCorrect ? wordData.id : this.getWrongLabel();
+  }
+  getColor() {
+    if (this.isCorrect) {
+      const colors = ['#4CAF50', '#66BB6A', '#81C784', '#43A047', '#2E7D32'];
+      return colors[Math.floor(Math.random() * colors.length)];
+    } else {
+      const colors = ['#E53935', '#EF5350', '#F44336', '#D32F2F', '#FF7043'];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+  }
+  getWrongLabel() {
+    const words = CATEGORIES[GAME.category].words;
+    let wrong, tries = 0;
+    do {
+      wrong = words[Math.floor(Math.random() * words.length)];
+      tries++;
+    } while (wrong.id === GAME.targetWord.id && tries < 20);
+    return wrong.id;
+  }
+  update() {
+    if (this.eaten) {
+      this.eatAnim += 0.15;
+      if (this.eatAnim > 1) this.dead = true;
+      return;
+    }
+    this.x += this.direction * this.speed;
+    this.wobble += this.wobbleSpeed;
+    this.y += Math.sin(this.wobble) * 0.6;
+    if (this.y < 140) this.y = 140;
+    if (this.y > H - 40) this.y = H - 40;
+    if (this.direction === 1 && this.x > W + 120) this.dead = true;
+    if (this.direction === -1 && this.x < -120) this.dead = true;
+  }
+  draw() {
+    const s = this.size;
+    const dir = this.direction;
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    if (this.eaten) {
+      const scale = 1 - this.eatAnim;
+      ctx.scale(scale * dir, scale);
+      ctx.globalAlpha = 1 - this.eatAnim;
+    } else {
+      ctx.scale(dir, 1);
+    }
+
+    // Body
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, s, s * 0.62, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tail
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.8, 0);
+    ctx.lineTo(-s * 1.5, -s * 0.5);
+    ctx.lineTo(-s * 1.5, s * 0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Fin (dorsal)
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.moveTo(-s*0.2, -s*0.5);
+    ctx.lineTo(s*0.2, -s*0.5);
+    ctx.lineTo(0, -s*0.9);
+    ctx.closePath();
+    ctx.fill();
+
+    // Eye
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(s * 0.5, -s * 0.12, s * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(s * 0.55, -s * 0.12, s * 0.11, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(-s*0.2, -s*0.22, s*0.45, s*0.18, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Label
+    if (!this.eaten) {
+      ctx.save();
+      ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif';
+      const tw = ctx.measureText(this.label).width;
+      const padding = 7;
+      const labelW = tw + padding * 2;
+      const labelH = 19;
+      const labelY = this.y + this.size + 6;
+      const labelX = this.x - labelW / 2;
+
+      ctx.fillStyle = this.isCorrect ? 'rgba(76, 175, 80, 0.92)' : 'rgba(229, 57, 53, 0.92)';
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      roundRect(ctx, labelX, labelY, labelW, labelH, 9);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(this.label, this.x, labelY + labelH / 2 + 1);
+      ctx.restore();
+    }
+  }
+}
+
+// ---------- PARTICLES ----------
+class Particle {
+  constructor(x, y, color, opts = {}) {
+    this.x = x; this.y = y;
+    const speed = opts.speed || 4;
+    this.vx = rand(-speed, speed);
+    this.vy = rand(-speed, speed);
+    this.life = 1;
+    this.decay = opts.decay || 0.02;
+    this.color = color;
+    this.size = rand(3, 8);
+    this.gravity = opts.gravity || 0.1;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += this.gravity;
+    this.vx *= 0.98;
+    this.life -= this.decay;
+  }
+  draw() {
+    ctx.globalAlpha = Math.max(0, this.life);
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ---------- BUBBLES ----------
+class Bubble {
+  constructor() { this.reset(true); }
+  reset(initial = false) {
+    this.x = rand(0, W);
+    this.y = initial ? rand(0, H) : H + 20;
+    this.size = rand(3, 12);
+    this.speed = rand(0.3, 1.1);
+    this.wobble = rand(0, Math.PI * 2);
+  }
+  update() {
+    this.y -= this.speed;
+    this.wobble += 0.02;
+    this.x += Math.sin(this.wobble) * 0.3;
+    if (this.y < -20) this.reset();
+  }
+  draw() {
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fill();
+  }
+}
+
+// ---------- SPAWNING ----------
+function spawnFish() {
+  const isCorrect = Math.random() < 0.5;
+  const wordData = isCorrect ? GAME.targetWord : null;
+  GAME.fishes.push(new Fish(isCorrect, wordData));
+}
+
+function pickNewTarget() {
+  const words = CATEGORIES[GAME.category].words;
+  let newWord;
+  let tries = 0;
+  do {
+    newWord = words[Math.floor(Math.random() * words.length)];
+    tries++;
+  } while (GAME.targetWord && newWord.en === GAME.targetWord.en && tries < 20);
+  GAME.targetWord = newWord;
+  document.getElementById('targetWord').textContent = newWord.en;
+}
+
+// ---------- FEEDBACK ----------
+function showFeedback(text, color) {
+  const fb = document.getElementById('feedback');
+  fb.textContent = text;
+  fb.style.color = color;
+  fb.classList.remove('show');
+  void fb.offsetWidth;
+  fb.classList.add('show');
+}
+
+function showCombo(combo) {
+  if (combo < 2) return;
+  const el = document.getElementById('comboText');
+  el.textContent = `🔥 COMBO x${combo}!`;
+  el.classList.add('show');
+  clearTimeout(el._timeout);
+  el._timeout = setTimeout(() => el.classList.remove('show'), 1000);
+}
+
+// ---------- COLLISION ----------
+function checkCollisions() {
+  const ps = player.size;
+  for (const fish of GAME.fishes) {
+    if (fish.dead || fish.eaten) continue;
+    const d = dist(player.x, player.y, fish.x, fish.y);
+    if (d < ps + fish.size * 0.75) {
+      fish.eaten = true;
+
+      if (fish.isCorrect) {
+        GAME.combo++;
+        if (GAME.combo > GAME.maxCombo) GAME.maxCombo = GAME.combo;
+        const points = 10 + GAME.combo * 2;
+        GAME.score += points;
+        GAME.correctCount++;
+        player.size = Math.min(player.size + 1.5, 45);
+
+        // Particles (gold burst)
+        for (let i = 0; i < 14; i++) {
+          GAME.particles.push(new Particle(fish.x, fish.y,
+            ['#FFD93D', '#FFEB3B', '#FFC107'][i % 3],
+            {speed: 5, decay: 0.025, gravity: 0.15}));
+        }
+
+        showFeedback('+' + points, '#4CAF50');
+        showCombo(GAME.combo);
+        Audio.eatCorrect();
+        if (GAME.combo >= 3) Audio.comboUp(GAME.combo);
+
+        updateHUD();
+
+        // Level up every 5 correct answers
+        if (GAME.correctCount % 5 === 0 && GAME.correctCount > 0) {
+          GAME.level++;
+          GAME.spawnInterval = Math.max(600, GAME.spawnInterval - 110);
+          Audio.levelUp();
+          setTimeout(() => {
+            showFeedback('LEVEL UP!', '#FFD93D');
+          }, 350);
+        }
+
+        // New target after correct
+        setTimeout(() => pickNewTarget(), 250);
+      } else {
+        // Wrong!
+        GAME.combo = 0;
+        GAME.wrongCount++;
+        GAME.score = Math.max(0, GAME.score - 5);
+        GAME.lives--;
+        player.size = Math.max(18, player.size - 2);
+
+        for (let i = 0; i < 12; i++) {
+          GAME.particles.push(new Particle(fish.x, fish.y,
+            ['#E53935', '#EF5350', '#FF5252'][i % 3],
+            {speed: 5, decay: 0.03, gravity: 0.2}));
+        }
+
+        showFeedback('-5 ❌', '#E53935');
+        Audio.eatWrong();
+        updateHUD();
+
+        if (GAME.lives <= 0) gameOver();
+      }
+    }
+  }
+}
+
+// ---------- HUD ----------
+function updateHUD() {
+  document.getElementById('score').textContent = '⭐ Skor: ' + GAME.score;
+  document.getElementById('lives').textContent = '❤️ Nyawa: ' + GAME.lives;
+  document.getElementById('level').textContent = '📊 Lv: ' + GAME.level;
+  let sizeLabel = 'Kecil';
+  if (player.size > 30) sizeLabel = 'Sedang';
+  if (player.size > 40) sizeLabel = 'Besar';
+  document.getElementById('size').textContent = '🐟 ' + sizeLabel;
+
+  const cat = CATEGORIES[GAME.category];
+  document.getElementById('categoryBadge').textContent = cat.emoji + ' ' + cat.name;
+}
+
+// ---------- DRAW PLAYER ----------
+function drawPlayer() {
+  const s = player.size;
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  const scaleX = player.vx < -0.1 ? -1 : 1;
+  ctx.scale(scaleX, 1);
+
+  const grad = ctx.createLinearGradient(0, -s, 0, s);
+  grad.addColorStop(0, '#FFB74D');
+  grad.addColorStop(0.5, '#FF9800');
+  grad.addColorStop(1, '#F57C00');
+
+  // Tail
+  ctx.fillStyle = '#EF6C00';
+  ctx.beginPath();
+  ctx.moveTo(-s * 0.8, 0);
+  ctx.lineTo(-s * 1.6, -s * 0.6);
+  ctx.lineTo(-s * 1.6, s * 0.6);
+  ctx.closePath();
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, s, s * 0.65, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Stripe
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(0, -s * 0.15, s * 0.7, s * 0.18, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Fin
+  ctx.fillStyle = 'rgba(239, 108, 0, 0.85)';
+  ctx.beginPath();
+  ctx.moveTo(-s*0.1, -s*0.6);
+  ctx.lineTo(s*0.3, -s*0.6);
+  ctx.lineTo(s*0.1, -s*1.1);
+  ctx.closePath();
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(s * 0.55, -s * 0.15, s * 0.25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(s * 0.62, -s * 0.15, s * 0.12, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mouth
+  ctx.strokeStyle = '#5D4037';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(s * 0.75, s * 0.15, s * 0.15, 0, Math.PI);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// ---------- BACKGROUND ----------
+function drawBackground() {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0277BD');
+  grad.addColorStop(0.5, '#01579B');
+  grad.addColorStop(1, '#001a33');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Light rays
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 5; i++) {
+    const x = (W / 5) * i + Math.sin(Date.now() * 0.0005 + i) * 30;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 60, 0);
+    ctx.lineTo(x + 120, H);
+    ctx.lineTo(x - 20, H);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Sea floor
+  ctx.fillStyle = '#3E2723';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 40) {
+    ctx.lineTo(x, H - 18 - Math.sin(x * 0.02) * 8);
+  }
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Seaweed
+  ctx.strokeStyle = '#2E7D32';
+  ctx.lineWidth = 4;
+  for (let i = 0; i < 8; i++) {
+    const x = (W / 8) * i + 20;
+    ctx.beginPath();
+    ctx.moveTo(x, H - 18);
+    for (let y = H - 18; y > H - 70; y -= 5) {
+      ctx.lineTo(x + Math.sin(y * 0.1 + Date.now() * 0.002) * 8, y);
+    }
+    ctx.stroke();
+  }
+}
+
+// ---------- GAME LOOP ----------
+function gameLoop(timestamp) {
+  if (!GAME.lastTime) GAME.lastTime = timestamp;
+  const dt = Math.min(timestamp - GAME.lastTime, 50);
+  GAME.lastTime = timestamp;
+
+  if (GAME.state === 'playing' && GAME.ready) {
+    update(timestamp);
+  }
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+function update(timestamp) {
+  // Player movement
+  if (pointer.active) {
+    const dx = pointer.x - player.x;
+    const dy = pointer.y - player.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 5) {
+      const speed = 6.5;
+      const mx = (dx / d) * speed;
+      const my = (dy / d) * speed;
+      player.vx += (mx - player.vx) * 0.18;
+      player.vy += (my - player.vy) * 0.18;
+    } else {
+      player.vx *= 0.8;
+      player.vy *= 0.8;
+    }
+  } else {
+    player.vx *= 0.9;
+    player.vy *= 0.9;
+  }
+
+  player.x += player.vx;
+  player.y += player.vy;
+  player.x = Math.max(player.size, Math.min(W - player.size, player.x));
+  player.y = Math.max(130 + player.size, Math.min(H - 30 - player.size, player.y));
+
+  // Spawn
+  if (timestamp - GAME.lastSpawn > GAME.spawnInterval) {
+    spawnFish();
+    GAME.lastSpawn = timestamp;
+  }
+
+  for (const f of GAME.fishes) f.update();
+  GAME.fishes = GAME.fishes.filter(f => !f.dead);
+
+  for (const p of GAME.particles) p.update();
+  GAME.particles = GAME.particles.filter(p => p.life > 0);
+
+  for (const b of GAME.bubbles) b.update();
+
+  checkCollisions();
+}
+
+function render() {
+  drawBackground();
+  for (const b of GAME.bubbles) b.draw();
+  for (const f of GAME.fishes) f.draw();
+  if (GAME.state === 'playing' || GAME.state === 'gameover') drawPlayer();
+  for (const p of GAME.particles) p.draw();
+}
+
+// ---------- INIT ----------
+function initGame() {
+  GAME.score = 0;
+  GAME.lives = 3;
+  GAME.level = 1;
+  GAME.combo = 0;
+  GAME.maxCombo = 0;
+  GAME.correctCount = 0;
+  GAME.wrongCount = 0;
+  GAME.fishes = [];
+  GAME.particles = [];
+  GAME.spawnInterval = 1400;
+  GAME.lastSpawn = performance.now();
+  GAME.lastTime = performance.now();
+  GAME.fishIdCounter = 0;
+  GAME.ready = false;
+
+  player.size = 22;
+  player.x = W / 2;
+  player.y = H * 0.6;
+  player.vx = 0;
+  player.vy = 0;
+
+  pointer.x = W / 2;
+  pointer.y = H * 0.6;
+  pointer.active = false;
+
+  GAME.bubbles = [];
+  for (let i = 0; i < 22; i++) GAME.bubbles.push(new Bubble());
+
+  pickNewTarget();
+  updateHUD();
+
+  // Enable spawning after short delay
+  setTimeout(() => { GAME.ready = true; }, 400);
+}
+
+function startGame() {
+  Audio.init();
+  Audio.buttonClick();
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('gameOverScreen').classList.add('hidden');
+  initGame();
+  GAME.state = 'playing';
+}
+
+function gameOver() {
+  GAME.state = 'gameover';
+  Audio.gameOver();
+
+  // Save highscore
+  const isNewRecord = HighScore.set(GAME.category, GAME.score);
+
+  document.getElementById('finalScore').textContent = GAME.score;
+  document.getElementById('statCorrect').textContent = GAME.correctCount;
+  document.getElementById('statWrong').textContent = GAME.wrongCount;
+  document.getElementById('statCombo').textContent = GAME.maxCombo;
+
+  let msg = 'Terus semangat belajar! 💪';
+  if (GAME.score >= 300) msg = 'LUAR BIASA! Kamu jago! 🌟🌟🌟';
+  else if (GAME.score >= 200) msg = 'Hebat sekali! 🌟🌟';
+  else if (GAME.score >= 100) msg = 'Bagus! Terus berlatih! 🎉';
+  else if (GAME.score >= 50) msg = 'Kerja bagus! 👏';
+  document.getElementById('gameOverMsg').textContent = msg;
+
+  // Highscore display
+  const hsBox = document.getElementById('gameOverHsBox');
+  const newRecRow = document.getElementById('newRecordRow');
+  const bestScore = HighScore.get(GAME.category);
+  document.getElementById('goHsValue').textContent = bestScore;
+  hsBox.style.display = 'flex';
+
+  if (isNewRecord) {
+    newRecRow.style.display = 'flex';
+    setTimeout(() => Audio.newRecord(), 900);
+  } else {
+    newRecRow.style.display = 'none';
+  }
+
+  setTimeout(() => {
+    document.getElementById('gameOverScreen').classList.remove('hidden');
+  }, 900);
+}
+
+// ---------- CATEGORY UI ----------
+function buildCategoryGrid() {
+  const grid = document.getElementById('categoryGrid');
+  grid.innerHTML = '';
+  for (const key in CATEGORIES) {
+    const cat = CATEGORIES[key];
+    const btn = document.createElement('button');
+    btn.className = 'categoryBtn' + (key === GAME.category ? ' active' : '');
+    btn.dataset.cat = key;
+    const best = HighScore.get(key);
+    btn.innerHTML = `
+      <span class="catEmoji">${cat.emoji}</span>
+      <span class="catName">${cat.name}</span>
+      <span class="catCount">${cat.words.length} kata${best > 0 ? ' • 🏆' + best : ''}</span>
+    `;
+    btn.addEventListener('click', () => {
+      GAME.category = key;
+      Audio.init();
+      Audio.buttonClick();
+      document.querySelectorAll('.categoryBtn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateStartHighScore();
+    });
+    grid.appendChild(btn);
+  }
+}
+
+function updateStartHighScore() {
+  const best = HighScore.get(GAME.category);
+  const box = document.getElementById('startHighScore');
+  if (best > 0) {
+    document.getElementById('hsValue').textContent = best;
+    box.style.display = 'flex';
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+// ---------- MENU ----------
+function showMenu() {
+  GAME.state = 'menu';
+  buildCategoryGrid();
+  updateStartHighScore();
+  document.getElementById('startScreen').classList.remove('hidden');
+  document.getElementById('gameOverScreen').classList.add('hidden');
+}
+
+// ---------- AUDIO TOGGLE ----------
+function updateAudioBtn() {
+  const btn = document.getElementById('audioBtn');
+  btn.textContent = GAME.soundsOn ? '🔊' : '🔇';
+}
+
+// ---------- EVENT LISTENERS ----------
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+document.getElementById('menuBtn').addEventListener('click', () => {
+  Audio.buttonClick();
+  showMenu();
+});
+document.getElementById('resetHsBtn').addEventListener('click', () => {
+  if (confirm('Hapus semua highscore?')) {
+    HighScore.reset();
+    Audio.buttonClick();
+    buildCategoryGrid();
+    updateStartHighScore();
+  }
+});
+document.getElementById('audioBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  Audio.init();
+  GAME.soundsOn = !GAME.soundsOn;
+  Audio.setEnabled(GAME.soundsOn);
+  HighScore.setMuted(!GAME.soundsOn);
+  updateAudioBtn();
+  if (GAME.soundsOn) Audio.buttonClick();
+});
+
+// Prevent scroll/zoom
+document.addEventListener('touchmove', (e) => {
+  if (e.target === canvas) e.preventDefault();
+}, { passive: false });
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// Prevent double-tap zoom
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 300) e.preventDefault();
+  lastTouchEnd = now;
+}, false);
+
+// ---------- BOOT ----------
+(function boot() {
+  // Load sound preference
+  GAME.soundsOn = !HighScore.getMuted();
+  Audio.setEnabled(GAME.soundsOn);
+  updateAudioBtn();
+
+  buildCategoryGrid();
+  updateStartHighScore();
+
+  // First user interaction unlocks audio
+  const unlock = () => {
+    Audio.init();
+    document.removeEventListener('touchstart', unlock);
+    document.removeEventListener('click', unlock);
+  };
+  document.addEventListener('touchstart', unlock, { once: true });
+  document.addEventListener('click', unlock, { once: true });
+
+  requestAnimationFrame(gameLoop);
+})();
+</script>
+</body>
+</html>
